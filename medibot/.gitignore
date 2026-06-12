@@ -1,0 +1,10 @@
+#VENV
+midibot_env/
+
+#ENV
+.env
+
+#VectorDB
+*.db
+
+Code Walkthrough.md

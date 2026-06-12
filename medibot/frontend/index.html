@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediBot — MediAssist Health Network</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+
+  <style>
+    /* ─── Base ─── */
+    :root {
+      --sidebar-w: 280px;
+      --topbar-h: 60px;
+      --inputbar-h: 90px;
+    }
+    body { background: #f1f5f9; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    /* ─── Login ─── */
+    #loginScreen {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-card { width: 420px; border-radius: 20px; border: none; box-shadow: 0 25px 60px rgba(0,0,0,0.4); }
+    .demo-btn {
+      display: flex; align-items: center; gap: 10px;
+      background: #f8fafc; border: 1px solid #e2e8f0;
+      border-radius: 10px; padding: 8px 12px; cursor: pointer;
+      transition: all .15s; text-align: left; width: 100%;
+    }
+    .demo-btn:hover { background: #eff6ff; border-color: #93c5fd; }
+    .demo-badge { font-size: 11px; background: #e0e7ff; color: #4338ca;
+                  padding: 2px 8px; border-radius: 20px; margin-left: auto; font-weight: 600; }
+
+    /* ─── App Layout ─── */
+    #appScreen { display: none; height: 100vh; overflow: hidden; }
+
+    /* ─── Sidebar ─── */
+    #sidebar {
+      width: var(--sidebar-w); min-width: var(--sidebar-w);
+      background: #0f172a; color: #fff;
+      display: flex; flex-direction: column; height: 100vh; overflow-y: auto;
+    }
+    .sidebar-logo { padding: 20px; border-bottom: 1px solid #1e293b; }
+    .sidebar-user { padding: 16px 20px; border-bottom: 1px solid #1e293b; }
+    .role-pill {
+      display: inline-block; padding: 3px 12px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+    }
+    .col-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; margin: 2px;
+    }
+    .col-clinical   { background: #dbeafe; color: #1d4ed8; }
+    .col-nursing    { background: #dcfce7; color: #15803d; }
+    .col-billing    { background: #fef9c3; color: #a16207; }
+    .col-equipment  { background: #ffedd5; color: #c2410c; }
+    .col-general    { background: #f1f5f9; color: #475569; }
+    .capability-item { font-size: 12px; color: #94a3b8; padding: 4px 0; }
+    .capability-item .bi { color: #60a5fa; margin-right: 6px; }
+    .rbac-notice {
+      background: rgba(217,119,6,0.15); border: 1px solid rgba(217,119,6,0.3);
+      border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #fcd34d; margin-top: 12px;
+    }
+
+    /* ─── Main Chat ─── */
+    #mainArea { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    #topbar {
+      height: var(--topbar-h); background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex; align-items: center; padding: 0 20px;
+      justify-content: space-between; flex-shrink: 0;
+    }
+
+    /* ─── Messages ─── */
+    #messagesArea {
+      flex: 1; overflow-y: auto; padding: 24px 20px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    #messagesArea::-webkit-scrollbar { width: 4px; }
+    #messagesArea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+    .msg-user { display: flex; justify-content: flex-end; }
+    .msg-user .bubble {
+      max-width: 70%; background: #2563eb; color: #fff;
+      border-radius: 18px 18px 4px 18px; padding: 10px 16px;
+      font-size: 14px; line-height: 1.5;
+    }
+    .msg-bot { display: flex; gap: 10px; align-items: flex-start; }
+    .bot-avatar {
+      width: 34px; height: 34px; background: #dbeafe; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      font-size: 16px; margin-top: 2px;
+    }
+    .msg-bot .bubble {
+      max-width: 80%; background: #fff; border: 1px solid #e2e8f0;
+      border-radius: 4px 18px 18px 18px; padding: 12px 16px;
+      font-size: 14px; line-height: 1.6; box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    }
+    .bubble-error   { background: #fef2f2 !important; border-color: #fecaca !important; }
+    .bubble-rbac    { background: #fffbeb !important; border-color: #fde68a !important; }
+
+    /* sources */
+    .sources-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9; }
+    .source-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      background: #f8fafc; border-radius: 8px; padding: 6px 10px;
+      margin-bottom: 5px; font-size: 12px; color: #475569;
+    }
+    .retrieval-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-top: 8px; display: inline-block; }
+    .badge-hybrid { background: #dbeafe; color: #1d4ed8; }
+    .badge-sql    { background: #ede9fe; color: #6d28d9; }
+
+    /* typing indicator */
+    .typing-dot {
+      width: 7px; height: 7px; background: #93c5fd; border-radius: 50%; display: inline-block;
+      animation: bounce .8s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: .15s; }
+    .typing-dot:nth-child(3) { animation-delay: .3s; }
+    @keyframes bounce { 0%,80%,100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
+
+    /* ─── Input bar ─── */
+    #inputBar {
+      background: #fff; border-top: 1px solid #e2e8f0;
+      padding: 14px 20px; flex-shrink: 0;
+    }
+    #questionInput {
+      border-radius: 12px; border: 1px solid #e2e8f0; resize: none;
+      font-size: 14px; padding: 10px 14px;
+      transition: border-color .15s;
+    }
+    #questionInput:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1); outline: none; }
+    #sendBtn {
+      border-radius: 10px; background: #2563eb; border: none;
+      color: #fff; padding: 10px 20px; font-weight: 600; font-size: 14px;
+      transition: background .15s;
+    }
+    #sendBtn:hover:not(:disabled) { background: #1d4ed8; }
+    #sendBtn:disabled { background: #93c5fd; cursor: not-allowed; }
+
+    /* ─── Example chips ─── */
+    #exampleChips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 20px 0; }
+    .example-chip {
+      font-size: 12px; background: #fff; border: 1px solid #e2e8f0;
+      border-radius: 20px; padding: 4px 12px; cursor: pointer; color: #475569;
+      transition: all .15s;
+    }
+    .example-chip:hover { background: #eff6ff; border-color: #93c5fd; color: #2563eb; }
+
+    /* role colors */
+    .role-doctor          { background: #2563eb; }
+    .role-nurse           { background: #16a34a; }
+    .role-billing_executive { background: #ca8a04; }
+    .role-technician      { background: #ea580c; }
+    .role-admin           { background: #7c3aed; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      #sidebar { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     LOGIN SCREEN
+═══════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-card card p-4">
+    <!-- Header -->
+    <div class="text-center mb-4">
+      <div class="d-inline-flex align-items-center justify-content-center bg-primary rounded-3 mb-3"
+           style="width:56px;height:56px;font-size:26px;">🏥</div>
+      <h4 class="fw-bold mb-0">MediBot</h4>
+      <small class="text-muted">MediAssist Health Network</small>
+    </div>
+
+    <!-- Alert -->
+    <div id="loginAlert" class="alert alert-danger d-none py-2 mb-3 small"></div>
+
+    <!-- Form -->
+    <div class="mb-3">
+      <input id="loginUser" type="text" class="form-control" placeholder="Username" />
+    </div>
+    <div class="mb-3">
+      <input id="loginPass" type="password" class="form-control" placeholder="Password" />
+    </div>
+    <button id="loginBtn" class="btn btn-primary w-100 fw-semibold mb-4">
+      Sign In
+    </button>
+
+    <!-- Demo accounts -->
+    <p class="text-center text-muted small fw-semibold text-uppercase mb-2" style="letter-spacing:.5px">
+      Demo Accounts
+    </p>
+    <div id="demoAccounts" class="d-flex flex-column gap-2">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     APP SCREEN
+═══════════════════════════════════════════ -->
+<div id="appScreen" class="d-flex">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <!-- Logo -->
+    <div class="sidebar-logo d-flex align-items-center gap-2">
+      <div class="d-flex align-items-center justify-content-center bg-primary rounded-2"
+           style="width:38px;height:38px;font-size:18px;">🏥</div>
+      <div>
+        <div class="fw-bold" style="font-size:15px;">MediBot</div>
+        <div class="text-muted" style="font-size:11px;">MediAssist Health Network</div>
+      </div>
+    </div>
+
+    <!-- User -->
+    <div class="sidebar-user">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <div id="userAvatar" class="d-flex align-items-center justify-content-center rounded-circle text-white fw-bold"
+             style="width:36px;height:36px;font-size:14px;flex-shrink:0;"></div>
+        <div>
+          <div id="userName" class="fw-semibold" style="font-size:14px;"></div>
+          <div id="userHandle" class="text-muted" style="font-size:11px;"></div>
+        </div>
+      </div>
+      <div id="rolePill" class="role-pill text-white"></div>
+    </div>
+
+    <!-- Collections -->
+    <div class="p-3 border-bottom" style="border-color:#1e293b !important;">
+      <p class="text-muted small fw-semibold text-uppercase mb-2" style="letter-spacing:.5px;font-size:10px;">
+        Document Access
+      </p>
+      <div id="collectionBadges"></div>
+    </div>
+
+    <!-- Capabilities -->
+    <div class="p-3 border-bottom" style="border-color:#1e293b !important;">
+      <p class="text-muted small fw-semibold text-uppercase mb-2" style="letter-spacing:.5px;font-size:10px;">
+        Capabilities
+      </p>
+      <div id="capabilitiesList">
+        <div class="capability-item"><i class="bi bi-search"></i>Hybrid RAG (Dense + BM25)</div>
+        <div class="capability-item"><i class="bi bi-sort-down"></i>Cross-Encoder Reranking</div>
+        <div class="capability-item"><i class="bi bi-shield-check"></i>RBAC Enforced Retrieval</div>
+      </div>
+      <div class="rbac-notice">
+        <i class="bi bi-lock-fill me-1"></i>
+        <strong>RBAC Active:</strong> Access enforced at the vector store level. Restricted documents are filtered before the LLM processes anything.
+      </div>
+    </div>
+
+    <!-- Spacer + Logout -->
+    <div class="mt-auto p-3 border-top" style="border-color:#1e293b !important;">
+      <button id="logoutBtn" class="btn btn-outline-secondary btn-sm w-100" style="color:#94a3b8;border-color:#334155;">
+        <i class="bi bi-box-arrow-right me-1"></i>Sign Out
+      </button>
+    </div>
+  </div>
+
+  <!-- Main area -->
+  <div id="mainArea">
+    <!-- Topbar -->
+    <div id="topbar">
+      <div>
+        <div class="fw-semibold" style="font-size:15px;">MediBot Assistant</div>
+        <div class="text-muted" style="font-size:11px;">
+          Hybrid RAG &nbsp;·&nbsp; RBAC Enforced &nbsp;·&nbsp; Cross-Encoder Reranking
+        </div>
+      </div>
+      <div id="topbarBadges" class="d-flex flex-wrap gap-1"></div>
+    </div>
+
+    <!-- Example chips (hidden after first message) -->
+    <div id="exampleChips"></div>
+
+    <!-- Messages -->
+    <div id="messagesArea"></div>
+
+    <!-- Input -->
+    <div id="inputBar">
+      <div class="d-flex gap-2">
+        <textarea id="questionInput" class="form-control" rows="2"
+          placeholder="Ask MediBot a question..."></textarea>
+        <button id="sendBtn" class="btn">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </div>
+      <div class="text-muted mt-1" style="font-size:11px;">
+        Press Enter to send &nbsp;·&nbsp; Shift+Enter for new line &nbsp;·&nbsp; RBAC enforced at vector store level
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
+const API = '';
+
+const DEMO_USERS = [
+  { username: 'dr.subhrajit',     password: 'doctor123',   role: 'Doctor',             icon: '🩺' },
+  { username: 'nurse.ankita',     password: 'nurse123',    role: 'Nurse',              icon: '💉' },
+  { username: 'billing.aradhana', password: 'billing123',  role: 'Billing Executive',  icon: '🧾' },
+  { username: 'tech.anand',       password: 'tech123',     role: 'Technician',         icon: '🔧' },
+  { username: 'admin.sys',        password: 'admin123',    role: 'Admin',              icon: '🛡️' },
+];
+
+const COLLECTION_CLASS = {
+  clinical: 'col-clinical', nursing: 'col-nursing',
+  billing: 'col-billing', equipment: 'col-equipment', general: 'col-general',
+};
+
+const ROLE_CLASS = {
+  doctor: 'role-doctor', nurse: 'role-nurse',
+  billing_executive: 'role-billing_executive',
+  technician: 'role-technician', admin: 'role-admin',
+};
+
+const EXAMPLE_QUESTIONS = {
+  doctor: [
+    'What is the first-line treatment for hypertension?',
+    'What are the dosage guidelines for metformin?',
+    'What are the diagnostic criteria for Type 2 Diabetes?',
+  ],
+  nurse: [
+    'What is the IV cannula size for a paediatric patient under 5kg?',
+    'What are the infection control guidelines for wound dressing?',
+    'What is the ICU nursing protocol for ventilated patients?',
+  ],
+  billing_executive: [
+    'How many claims are currently pending?',
+    'What is the total claimed amount by department?',
+    'How many claims were escalated last month?',
+  ],
+  technician: [
+    'What is the calibration procedure for the ventilator?',
+    'How do I perform preventive maintenance on infusion pumps?',
+    'What fault codes does the DriveFlow IP-200 generate?',
+  ],
+  admin: [
+    'How many open maintenance tickets are there by category?',
+    'What is the staff leave policy for earned leave?',
+    'How many claims were rejected this year?',
+  ],
+};
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let currentUser = null; // { token, role, name, username, collections, sql_rag_available }
+let messageCount = 0;
+
+// ═══════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════
+
+// Render demo buttons
+const demoContainer = document.getElementById('demoAccounts');
+DEMO_USERS.forEach(u => {
+  const btn = document.createElement('button');
+  btn.className = 'demo-btn';
+  btn.innerHTML = `
+    <span style="font-size:20px">${u.icon}</span>
+    <div>
+      <div style="font-size:13px;font-weight:600;color:#1e293b">${u.username}</div>
+      <div style="font-size:11px;color:#64748b">${u.role}</div>
+    </div>
+    <span class="demo-badge">${u.password}</span>
+  `;
+  btn.addEventListener('click', () => doLogin(u.username, u.password));
+  demoContainer.appendChild(btn);
+});
+
+document.getElementById('loginBtn').addEventListener('click', () => {
+  doLogin(
+    document.getElementById('loginUser').value.trim(),
+    document.getElementById('loginPass').value.trim()
+  );
+});
+document.getElementById('loginPass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin(
+    document.getElementById('loginUser').value.trim(),
+    document.getElementById('loginPass').value.trim()
+  );
+});
+
+async function doLogin(username, password) {
+  if (!username || !password) {
+    showLoginAlert('Please enter username and password.');
+    return;
+  }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  hideLoginAlert();
+
+  try {
+    const res = await fetch(`${API}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Login failed');
+    }
+    const data = await res.json();
+    currentUser = {
+      token: data.access_token,
+      role: data.role,
+      name: data.name,
+      username: data.username,
+      collections: data.collections,
+      sql_rag_available: data.collections.includes('billing') || data.role === 'admin',
+    };
+    initApp();
+  } catch (e) {
+    showLoginAlert(e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+
+function showLoginAlert(msg) {
+  const el = document.getElementById('loginAlert');
+  el.textContent = msg; el.classList.remove('d-none');
+}
+function hideLoginAlert() {
+  document.getElementById('loginAlert').classList.add('d-none');
+}
+
+// ═══════════════════════════════════════════
+// APP INIT
+// ═══════════════════════════════════════════
+function initApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'flex';
+
+  const u = currentUser;
+
+  // Avatar
+  const avatar = document.getElementById('userAvatar');
+  avatar.textContent = u.name.charAt(0);
+  avatar.classList.add(ROLE_CLASS[u.role] || 'bg-secondary');
+
+  document.getElementById('userName').textContent = u.name;
+  document.getElementById('userHandle').textContent = '@' + u.username;
+
+  const pill = document.getElementById('rolePill');
+  pill.textContent = u.role.replace('_', ' ').toUpperCase();
+  pill.classList.add(ROLE_CLASS[u.role] || 'bg-secondary');
+
+  // Collection badges sidebar
+  const cb = document.getElementById('collectionBadges');
+  cb.innerHTML = u.collections.map(c =>
+    `<span class="col-badge ${COLLECTION_CLASS[c] || 'col-general'}"><i class="bi bi-circle-fill me-1" style="font-size:7px"></i>${c}</span>`
+  ).join('');
+
+  // SQL RAG capability
+  if (['billing_executive', 'admin'].includes(u.role)) {
+    const cap = document.getElementById('capabilitiesList');
+    cap.insertAdjacentHTML('beforeend',
+      `<div class="capability-item"><i class="bi bi-database" style="color:#c084fc !important"></i>SQL RAG Analytics</div>`
+    );
+  }
+
+  // Topbar badges
+  document.getElementById('topbarBadges').innerHTML = u.collections.map(c =>
+    `<span class="col-badge ${COLLECTION_CLASS[c] || 'col-general'}">${c}</span>`
+  ).join('');
+
+  // Example chips
+  const chips = document.getElementById('exampleChips');
+  const examples = EXAMPLE_QUESTIONS[u.role] || EXAMPLE_QUESTIONS.admin;
+  chips.innerHTML = examples.map(q =>
+    `<span class="example-chip" onclick="useExample(this)">${q}</span>`
+  ).join('');
+
+  // Welcome message
+  const welcomeText = `Welcome to MediBot, ${u.name}! 👋\n\nYou have access to: ${u.collections.join(', ')} collections.${
+    ['billing_executive', 'admin'].includes(u.role)
+      ? '\n\nYou can ask both document questions (Hybrid RAG) and analytical questions about claims/maintenance data (SQL RAG).'
+      : ''
+  }\n\nHow can I help you today?`;
+  appendBotMessage(welcomeText);
+
+  // Input
+  document.getElementById('questionInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  document.getElementById('sendBtn').addEventListener('click', sendMessage);
+
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', logout);
+}
+
+function logout() {
+  currentUser = null;
+  document.getElementById('messagesArea').innerHTML = '';
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  messageCount = 0;
+}
+
+// ═══════════════════════════════════════════
+// MESSAGING
+// ═══════════════════════════════════════════
+function useExample(el) {
+  document.getElementById('questionInput').value = el.textContent;
+  document.getElementById('questionInput').focus();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('questionInput');
+  const question = input.value.trim();
+  if (!question || document.getElementById('sendBtn').disabled) return;
+  input.value = '';
+
+  // Hide chips after first message
+  if (messageCount === 0) {
+    document.getElementById('exampleChips').style.display = 'none';
+  }
+  messageCount++;
+
+  appendUserMessage(question);
+  const loadingId = appendLoadingMessage();
+
+  document.getElementById('sendBtn').disabled = true;
+
+  try {
+    const res = await fetch(`${API}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentUser.token}`,
+      },
+      body: JSON.stringify({ question }),
+    });
+
+    removeMessage(loadingId);
+
+    if (!res.ok) {
+      const err = await res.json();
+      const isRbac = (err.detail || '').toLowerCase().includes('access');
+      appendBotMessage(
+        isRbac
+          ? `🔒 Access Restricted\n\nAs a ${currentUser.role.replace('_', ' ')}, you don't have permission to access the requested content.\nYou can only access: ${currentUser.collections.join(', ')} collections.`
+          : `❌ Error: ${err.detail || 'Something went wrong.'}`,
+        [], null,
+        isRbac ? 'rbac' : 'error'
+      );
+      return;
+    }
+
+    const data = await res.json();
+    appendBotMessage(data.answer, data.sources, data.retrieval_type);
+
+  } catch (e) {
+    removeMessage(loadingId);
+    appendBotMessage(
+      `❌ Could not reach the MediBot server. Make sure the backend is running at ${API}`,
+      [], null, 'error'
+    );
+  } finally {
+    document.getElementById('sendBtn').disabled = false;
+    input.focus();
+  }
+}
+
+// ─── Message rendering ───
+function appendUserMessage(text) {
+  const area = document.getElementById('messagesArea');
+  area.insertAdjacentHTML('beforeend', `
+    <div class="msg-user">
+      <div class="bubble">${escHtml(text)}</div>
+    </div>
+  `);
+  scrollToBottom();
+}
+
+function appendLoadingMessage() {
+  const id = 'loading-' + Date.now();
+  document.getElementById('messagesArea').insertAdjacentHTML('beforeend', `
+    <div id="${id}" class="msg-bot">
+      <div class="bot-avatar">🏥</div>
+      <div class="bubble d-flex align-items-center gap-1" style="padding:14px 18px;">
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+      </div>
+    </div>
+  `);
+  scrollToBottom();
+  return id;
+}
+
+function removeMessage(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function appendBotMessage(text, sources = [], retrievalType = null, variant = '') {
+  const bubbleClass = variant === 'error' ? 'bubble-error'
+                    : variant === 'rbac'  ? 'bubble-rbac' : '';
+
+  let sourcesHtml = '';
+  if (sources && sources.length > 0) {
+    sourcesHtml = `
+      <div class="sources-section">
+        <div class="text-muted fw-semibold mb-1" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px">Sources</div>
+        ${sources.map(s => `
+          <div class="source-item">
+            <i class="bi bi-file-earmark-text text-muted mt-1"></i>
+            <div>
+              <span class="fw-semibold">${escHtml(s.source_document)}</span>
+              ${s.section_title ? `<span class="text-muted"> · ${escHtml(s.section_title)}</span>` : ''}
+              <span class="col-badge ms-1 ${COLLECTION_CLASS[s.collection] || 'col-general'}">${escHtml(s.collection)}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  let badgeHtml = '';
+  if (retrievalType) {
+    const cls = retrievalType === 'sql_rag' ? 'badge-sql' : 'badge-hybrid';
+    const label = retrievalType === 'sql_rag' ? '🗃️ SQL RAG' : '🔍 Hybrid RAG';
+    badgeHtml = `<div class="retrieval-badge ${cls}">${label}</div>`;
+  }
+
+  document.getElementById('messagesArea').insertAdjacentHTML('beforeend', `
+    <div class="msg-bot">
+      <div class="bot-avatar">🏥</div>
+      <div class="bubble ${bubbleClass}">
+        <div style="white-space:pre-wrap">${escHtml(text)}</div>
+        ${sourcesHtml}
+        ${badgeHtml}
+      </div>
+    </div>
+  `);
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  const area = document.getElementById('messagesArea');
+  area.scrollTop = area.scrollHeight;
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
