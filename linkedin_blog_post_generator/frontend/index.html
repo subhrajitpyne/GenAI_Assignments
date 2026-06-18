@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Blog Post Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="site-header">
+        <div class="container">
+            <div class="d-flex align-items-center gap-2">
+                <span class="header-icon">🤖</span>
+                <span class="header-title">BlogGen AI</span>
+                <span class="header-tag">LangGraph</span>
+            </div>
+            <div class="header-meta">Multi-Agent System</div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="container text-center">
+            <h1 class="hero-heading">Generate LinkedIn Posts<br>with AI Agents</h1>
+            <p class="hero-sub">
+                Powered by a LangGraph multi-agent pipeline —
+                parallel research, ReAct tool loops, and a self-review reflection cycle.
+            </p>
+
+            <!-- Input Card -->
+            <div class="input-card mx-auto">
+                <label class="input-label">Topic</label>
+                <div class="input-row">
+                    <input
+                        type="text"
+                        id="topicInput"
+                        class="topic-input"
+                        placeholder="e.g. LangGraph, FastAPI, AI Agents..."
+                        onkeydown="if(event.key==='Enter') generatePost()"
+                    >
+                    <button class="generate-btn" id="generateBtn" onclick="generatePost()">
+                        <span id="btnText">Generate</span>
+                        <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pipeline steps -->
+    <section class="pipeline-section">
+        <div class="container">
+            <div class="pipeline-steps">
+                <div class="step" id="step-research">
+                    <div class="step-icon">🔍</div>
+                    <div class="step-label">Research</div>
+                    <div class="step-sub">Parallel agents</div>
+                </div>
+                <div class="step-arrow">→</div>
+                <div class="step" id="step-write">
+                    <div class="step-icon">✍️</div>
+                    <div class="step-label">Write</div>
+                    <div class="step-sub">ReAct + tools</div>
+                </div>
+                <div class="step-arrow">→</div>
+                <div class="step" id="step-review">
+                    <div class="step-icon">🔁</div>
+                    <div class="step-label">Review</div>
+                    <div class="step-sub">Reflection loop</div>
+                </div>
+                <div class="step-arrow">→</div>
+                <div class="step" id="step-output">
+                    <div class="step-icon">🚀</div>
+                    <div class="step-label">Output</div>
+                    <div class="step-sub">Final post</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Error -->
+    <div class="container">
+        <div id="errorAlert" class="error-alert d-none"></div>
+    </div>
+
+    <!-- Result -->
+    <section class="result-section d-none" id="resultSection">
+        <div class="container">
+
+            <!-- Meta row -->
+            <div class="result-meta d-flex gap-3 flex-wrap mb-4">
+                <div class="meta-chip" id="topicChip"></div>
+                <div class="meta-chip" id="iterChip"></div>
+                <div class="meta-chip" id="sourcesChip"></div>
+            </div>
+
+            <!-- Post content -->
+            <div class="post-card">
+                <div class="post-card-header">
+                    <span>📝 Generated LinkedIn Post</span>
+                    <button class="copy-btn" onclick="copyPost()" id="copyBtn">
+                        📋 Copy
+                    </button>
+                </div>
+                <div class="post-content" id="postContent"></div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="container text-center">
+            <span>Built with LangGraph · LangChain · FastAPI</span>
+            <span class="footer-divider">·</span>
+            <a href="https://github.com" class="footer-link" target="_blank">GitHub</a>
+            <span class="footer-divider">·</span>
+            <a href="https://hashnode.com" class="footer-link" target="_blank">Code & Automate</a>
+        </div>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

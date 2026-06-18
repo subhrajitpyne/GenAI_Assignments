@@ -1,0 +1,5 @@
+#Virtual ENV
+post_generator_env/
+
+#.ENV
+.env

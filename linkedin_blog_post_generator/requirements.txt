@@ -1,0 +1,19 @@
+# Core frameworks
+langgraph
+langchain
+langchain-core
+
+# Model integrations
+langchain-openai
+langchain-anthropic
+
+#Backend
+fastapi[all]
+uvicorn[standard]
+# Utilities
+python-dotenv
+certifi
+truststore
+pydantic-settings
+
+# Python 3.10+ required (LangChain 1.0 dropped 3.9 support)
