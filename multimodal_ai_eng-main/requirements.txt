@@ -1,0 +1,8 @@
+easyocr>=1.7.2
+fpdf2>=2.8.7
+google-genai>=1.73.1
+markdown>=3.10.2
+pillow>=12.2.0
+python-dotenv>=1.2.2
+reportlab>=4.4.10
+weasyprint>=68.1
