@@ -15,7 +15,7 @@ from .routers import (
     orchestrator_router,
     test_validation_router,
     test_result_router,
-    post_coder_router,
+    post_coder_router,          # ← import new router
 )
 
 
@@ -24,24 +24,19 @@ def build_graph() -> CompiledStateGraph:
     Assembles the full coding assistant graph.
 
     Flow:
-    START → orchestrator
-    orchestrator → coder (first run)
-    orchestrator → tester (after coder)
-    orchestrator → validate_tests (after tester)
-    validate_tests → runner (if valid) or tester (if invalid)
-    runner → coder (if fail) or output (if pass)
-    coder retry → runner DIRECTLY via post_coder_router  ← key fix
-    output → END
+    START → orchestrator → (coder + tester in parallel) →
+    orchestrator → validator → (runner or tester) →
+    runner → (coder or output)
     """
     builder = StateGraph(ProjectState)
 
     # ── Register all nodes ────────────────────────────────────────────────────
-    builder.add_node("orchestrator",   orchestrator_node)
-    builder.add_node("coder",          coder_node)
-    builder.add_node("tester",         tester_node)
-    builder.add_node("validate_tests", validator_node)
-    builder.add_node("runner",         runner_node)
-    builder.add_node("output",         output_node)
+    builder.add_node("orchestrator",    orchestrator_node)
+    builder.add_node("coder",           coder_node)
+    builder.add_node("tester",          tester_node)
+    builder.add_node("validate_tests",  validator_node)
+    builder.add_node("runner",          runner_node)
+    builder.add_node("output",          output_node)
 
     # ── Entry point ───────────────────────────────────────────────────────────
     builder.add_edge(START, "orchestrator")
@@ -59,10 +54,11 @@ def build_graph() -> CompiledStateGraph:
         },
     )
 
-    # ── Tester always reports back to orchestrator ────────────────────────────
+    # ── Coder and tester both report back to orchestrator ─────────────────────
+    builder.add_edge("coder",  "orchestrator")
     builder.add_edge("tester", "orchestrator")
 
-    # ── After validation — run tests or regenerate ────────────────────────────
+    # ── After validation — run tests or regenerate test cases ─────────────────
     builder.add_conditional_edges(
         "validate_tests",
         test_validation_router,
@@ -72,25 +68,13 @@ def build_graph() -> CompiledStateGraph:
         },
     )
 
-    # ── After runner — fix code or finish ─────────────────────────────────────
+    # ── After tests run — fix code or finish ──────────────────────────────────
     builder.add_conditional_edges(
         "runner",
         test_result_router,
         {
             "coder":  "coder",
             "output": "output",
-        },
-    )
-
-    # ── KEY FIX — after coder retry → ALWAYS go to runner directly ────────────
-    # Never route coder back to orchestrator after a retry
-    # orchestrator was skipping runner and going straight to output
-    builder.add_conditional_edges(
-        "coder",
-        post_coder_router,
-        {
-            "runner": "runner",   # ← retry → re-run tests immediately
-            "output": "output",   # ← max attempts → give up
         },
     )
 

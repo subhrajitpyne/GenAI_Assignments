@@ -109,43 +109,17 @@ a:hover { text-decoration: underline; }
 .code-textarea:focus { border-color: var(--border-hl); }
 .code-textarea::placeholder { color: var(--text-muted); }
 
-/* ── Language detection row ─────────────────────────────────────────────── */
-.lang-detect-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-.lang-detect-label {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-family: var(--mono);
-}
-.lang-detect-hint {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-family: var(--mono);
-    font-style: italic;
-}
-.lang-badge {
-    background: var(--accent-glow);
-    color: var(--accent);
-    border: 1px solid var(--border-hl);
-    border-radius: 20px;
-    font-size: 11px;
-    font-family: var(--mono);
-    padding: 2px 10px;
-    font-weight: 600;
-    transition: all 0.3s;
-}
-.lang-used-badge {
-    background: var(--bg-card);
+.lang-select {
+    width: 100%;
+    background: var(--bg-input);
     border: 1px solid var(--border);
-    border-radius: 20px;
-    font-size: 11px;
+    border-radius: 8px;
+    color: var(--text);
     font-family: var(--mono);
-    color: var(--text-muted);
-    padding: 2px 10px;
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    cursor: pointer;
 }
 
 /* ── Run button ─────────────────────────────────────────────────────────── */
@@ -195,8 +169,8 @@ a:hover { text-decoration: underline; }
     border-color: var(--green);
     background: var(--green-glow);
 }
-.step-icon  { font-size: 1rem; }
-.step-name  { font-family: var(--mono); font-size: 12px; }
+.step-icon { font-size: 1rem; }
+.step-name { font-family: var(--mono); font-size: 12px; }
 
 /* ── Cost grid ──────────────────────────────────────────────────────────── */
 .cost-grid {
@@ -339,5 +313,4 @@ a:hover { text-decoration: underline; }
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .main-content { padding: 16px 0; }
-    .lang-detect-hint { display: none; }
 }

@@ -1,17 +1,13 @@
 public class FactorialCalculator {
-    public static long calculateFactorial(Integer number) {
-        if (number == null) {
-            throw new IllegalArgumentException("Input cannot be null");
-        }
-        if (!(number instanceof Integer)) {
-            throw new IllegalArgumentException("Input must be an integer");
+    public static long calculateFactorial(int number) {
+        if (number == 0 || number == 1) {
+            return 1;
         }
         if (number < 0) {
-            throw new IllegalArgumentException("Input must be a non-negative integer");
+            throw new IllegalArgumentException("Number must be non-negative");
         }
-        
         long factorial = 1;
-        for (int i = 1; i <= number; i++) {
+        for (int i = 2; i <= number; i++) {
             factorial *= i;
         }
         return factorial;

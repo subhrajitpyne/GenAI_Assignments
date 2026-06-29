@@ -1,60 +1,31 @@
 const API_BASE = "http://localhost:8000/api";
 
-// ── Language detection — Java checked before JavaScript to avoid false match ──
-const LANGUAGE_KEYWORDS = {
-    "java":       ["java"],
-    "javascript": ["javascript", "js", "node", "nodejs"],
-    "python":     ["python", "py"],
-};
-
-const LANGUAGE_ICONS = {
-    "java":       "☕ Java",
-    "javascript": "🟨 JavaScript",
-    "python":     "🐍 Python",
-};
-
-function detectLanguage(question) {
-    const lower = ` ${question.toLowerCase()} `;  // pad for word boundary
-    for (const [lang, keywords] of Object.entries(LANGUAGE_KEYWORDS)) {
-        for (const kw of keywords) {
-            if (lower.includes(kw)) return lang;
-        }
-    }
-    return "python";
-}
-
-function updateLangBadge() {
-    const question = document.getElementById("questionInput").value;
-    const lang     = detectLanguage(question);
-    const badge    = document.getElementById("langBadge");
-    badge.textContent = LANGUAGE_ICONS[lang] || `🔧 ${lang}`;
-}
-
 // ── State ─────────────────────────────────────────────────────────────────────
-let totalCost    = 0.0;
-let callCount    = 0;
-let detectedLang = "python";
+let totalCost     = 0.0;
+let totalTokens   = 0;
+let callCount     = 0;
+let costBreakdown = [];
 
 // ── Run agent ─────────────────────────────────────────────────────────────────
 async function runAgent() {
     const question = document.getElementById("questionInput").value.trim();
+    const language = document.getElementById("languageSelect").value;
 
     if (!question) {
         showError("Please enter a problem statement.");
         return;
     }
 
-    detectedLang = detectLanguage(question);
-
+    // reset UI
     hideError();
     resetPipeline();
     resetOutputPanels();
     resetCost();
     setLoading(true);
-    showStatus("running", "⏳ Running agents...", "", detectedLang);
+    showStatus("running", "⏳ Running agents...", "");
 
     try {
-        await streamAgent(question);
+        await streamAgent(question, language);
     } catch (err) {
         showError(`Failed: ${err.message}`);
         setLoading(false);
@@ -62,11 +33,11 @@ async function runAgent() {
 }
 
 // ── Stream agent events ───────────────────────────────────────────────────────
-async function streamAgent(question) {
+async function streamAgent(question, language) {
     const response = await fetch(`${API_BASE}/stream`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ question }),   // language auto-detected by backend
+        body:    JSON.stringify({ question, language }),
     });
 
     if (!response.ok) {
@@ -86,12 +57,8 @@ async function streamAgent(question) {
 
         for (const line of lines) {
             if (!line.startsWith("data: ")) continue;
-            try {
-                const data = JSON.parse(line.replace("data: ", ""));
-                handleEvent(data);
-            } catch (e) {
-                console.warn("Failed to parse SSE line:", line);
-            }
+            const data = JSON.parse(line.replace("data: ", ""));
+            handleEvent(data);
         }
     }
 }
@@ -109,8 +76,10 @@ function handleEvent(data) {
         return;
     }
 
-    // activate pipeline step
-    if (data.node) activateStep(data.node);
+    // highlight active pipeline step
+    if (data.node) {
+        activateStep(data.node);
+    }
 
     // append agent notes to log
     if (data.notes && data.notes.length > 0) {
@@ -119,52 +88,65 @@ function handleEvent(data) {
 
     // accumulate cost
     if (data.cost) {
-        totalCost += data.cost;
-        callCount += 1;
+        totalCost   += data.cost;
+        callCount   += 1;
+        totalTokens += 0;   // individual token tracking via notes
         updateCostDisplay();
     }
 
-    // update detected language from backend confirmation
-    if (data.language) {
-        detectedLang = data.language;
-        // update badge to confirmed language
-        const badge = document.getElementById("langBadge");
-        if (badge) badge.textContent = LANGUAGE_ICONS[detectedLang] || `🔧 ${detectedLang}`;
-    }
-
-    // final output
+    // final result
     if (data.node === "output") {
         markStepDone("output");
-        if (data.final_code) showCode(data.final_code);
+        if (data.final_code) {
+            showCode(data.final_code);
+        }
         if (data.is_solved !== null && data.is_solved !== undefined) {
+            const solved = data.is_solved;
             showStatus(
-                data.is_solved ? "solved" : "unsolved",
-                data.is_solved ? "✅ Solved" : "❌ Unsolved",
+                solved ? "solved" : "unsolved",
+                solved ? "✅ Solved" : "❌ Unsolved",
                 `Cost: $${totalCost.toFixed(4)} · Calls: ${callCount}`,
-                detectedLang,
             );
+        }
+        if (data.test_status) {
+            markStepDone(data.test_status === "pass" ? "runner" : "runner");
         }
     }
 }
 
-// ── Pipeline ──────────────────────────────────────────────────────────────────
-const STEP_IDS = ["orchestrator","coder","tester","validate_tests","runner","output"];
+// ── Pipeline helpers ──────────────────────────────────────────────────────────
+const STEP_IDS = [
+    "orchestrator", "coder", "tester",
+    "validate_tests", "runner", "output",
+];
 
 function activateStep(nodeName) {
-    STEP_IDS.forEach(s => document.getElementById(`step-${s}`)?.classList.remove("active"));
-    const el = document.getElementById(`step-${nodeName}`);
-    if (el) { el.classList.add("active"); el.classList.remove("done"); }
+    const id = `step-${nodeName}`;
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    // deactivate previously active
+    STEP_IDS.forEach(s => {
+        const e = document.getElementById(`step-${s}`);
+        if (e) e.classList.remove("active");
+    });
+
+    el.classList.add("active");
+    el.classList.remove("done");
     showLog();
 }
 
 function markStepDone(nodeName) {
     const el = document.getElementById(`step-${nodeName}`);
-    if (el) { el.classList.remove("active"); el.classList.add("done"); }
+    if (!el) return;
+    el.classList.remove("active");
+    el.classList.add("done");
 }
 
 function resetPipeline() {
     STEP_IDS.forEach(s => {
-        document.getElementById(`step-${s}`)?.classList.remove("active","done");
+        const el = document.getElementById(`step-${s}`);
+        if (el) el.classList.remove("active", "done");
     });
 }
 
@@ -198,30 +180,33 @@ function copyCode() {
 }
 
 // ── Status ────────────────────────────────────────────────────────────────────
-function showStatus(type, label, meta, lang) {
+function showStatus(type, label, meta) {
     const panel  = document.getElementById("statusPanel");
     const badge  = document.getElementById("statusBadge");
     const metaEl = document.getElementById("statusMeta");
-    const langEl = document.getElementById("langUsedBadge");
 
     panel.classList.remove("d-none");
-    badge.className    = `status-badge ${type}`;
-    badge.textContent  = label;
+    badge.className   = `status-badge ${type}`;
+    badge.textContent = label;
     metaEl.textContent = meta;
-    if (lang && langEl) langEl.textContent = LANGUAGE_ICONS[lang] || `🔧 ${lang}`;
 }
 
 // ── Cost ──────────────────────────────────────────────────────────────────────
 function resetCost() {
-    totalCost = 0.0;
-    callCount = 0;
+    totalCost     = 0.0;
+    totalTokens   = 0;
+    callCount     = 0;
+    costBreakdown = [];
     document.getElementById("costPanel").classList.add("d-none");
     document.getElementById("costGrid").innerHTML = "";
 }
 
 function updateCostDisplay() {
-    document.getElementById("costPanel").classList.remove("d-none");
-    document.getElementById("costGrid").innerHTML = `
+    const panel = document.getElementById("costPanel");
+    const grid  = document.getElementById("costGrid");
+    panel.classList.remove("d-none");
+
+    grid.innerHTML = `
         <div class="cost-row">
             <span>LLM calls so far</span>
             <span>${callCount}</span>
@@ -238,6 +223,7 @@ function setLoading(loading) {
     const btn     = document.getElementById("runBtn");
     const text    = document.getElementById("btnText");
     const spinner = document.getElementById("btnSpinner");
+
     btn.disabled        = loading;
     text.textContent    = loading ? "Running..." : "⚡ Run Agent";
     spinner.classList.toggle("d-none", !loading);
@@ -253,22 +239,11 @@ function hideError() {
     document.getElementById("errorAlert").classList.add("d-none");
 }
 
-// ── Reset output panels ───────────────────────────────────────────────────────
+// ── Reset output ──────────────────────────────────────────────────────────────
 function resetOutputPanels() {
-    ["statusPanel","logPanel","codePanel","testPanel"].forEach(id => {
+    ["statusPanel", "logPanel", "codePanel", "testPanel"].forEach(id => {
         document.getElementById(id)?.classList.add("d-none");
     });
-    document.getElementById("agentLog").innerHTML     = "";
+    document.getElementById("agentLog").innerHTML   = "";
     document.getElementById("codeOutput").textContent = "";
 }
-
-// ── Live language detection as user types ─────────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
-    const input = document.getElementById("questionInput");
-    if (input) {
-        input.addEventListener("input", updateLangBadge);
-        input.addEventListener("keydown", e => {
-            if (e.key === "Enter" && e.ctrlKey) runAgent();
-        });
-    }
-});

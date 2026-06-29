@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import asyncio
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -11,14 +12,38 @@ from pydantic import BaseModel
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 from src.coding_assistant.graph import graph
+from src.coding_assistant.tools.file_tools import get_file_extension
 
 router: APIRouter = APIRouter()
 
 
-# ── Request / Response schemas ─────────────────────────────────────────────────
+# ── Language detection ────────────────────────────────────────────────────────
+_LANGUAGE_KEYWORDS: dict[str, list[str]] = {
+    "java":       ["java"],
+    "javascript": ["javascript", " js ", "node", "nodejs"],
+    "python":     ["python", " py "],
+}
+
+def _detect_language(question: str) -> str:
+    """
+    Detect programming language from user prompt.
+    Checks Java first — 'java' appears in 'javascript' so order matters.
+    Defaults to python if nothing detected.
+    """
+    question_lower: str = f" {question.lower()} "
+    for language, keywords in _LANGUAGE_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword in question_lower:
+                print(f"[routes] keyword '{keyword.strip()}' → {language}", flush=True)
+                return language
+    print("[routes] no language detected → python (default)", flush=True)
+    return "python"
+
+
+# ── Schemas ───────────────────────────────────────────────────────────────────
 class RunRequest(BaseModel):
     question: str
-    language: str = "python"    # default to python
+    # no language field — always auto-detected from question
 
 
 class RunResponse(BaseModel):
@@ -33,13 +58,12 @@ class RunResponse(BaseModel):
     agent_notes:   list[str]
 
 
-def _build_initial_state(request: RunRequest) -> dict[str, Any]:
-    """Build clean initial state from request."""
-    from src.coding_assistant.tools.file_tools import get_file_extension
-    ext = get_file_extension(request.language)
+def _build_initial_state(question: str, language: str) -> dict[str, Any]:
+    """Build clean initial state."""
+    ext: str = get_file_extension(language)
     return {
-        "question":               request.question,
-        "language":               request.language,
+        "question":               question,
+        "language":               language,
         "next":                   "",
         "messages":               [],
         "code":                   "",
@@ -59,32 +83,30 @@ def _build_initial_state(request: RunRequest) -> dict[str, Any]:
         "final_code":             "",
         "final_test_code":        "",
         "is_solved":              False,
+        "function_name":          "",
     }
 
 
-# ── Routes ─────────────────────────────────────────────────────────────────────
+# ── Routes ────────────────────────────────────────────────────────────────────
 
 @router.get("/health")
 def health_check() -> dict[str, str]:
-    """Liveness check."""
     return {"status": "ok", "service": "Coding Assistant API"}
 
 
 @router.post("/run", response_model=RunResponse)
 async def run_agent(request: RunRequest) -> RunResponse:
-    """
-    Run the full coding assistant pipeline.
-    Blocks until complete — returns final result with cost breakdown.
-    """
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
-    import uuid
+    language: str = _detect_language(request.question)
+    print(f"[routes] /run — language: {language}", flush=True)
+
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
 
     try:
         result: dict[str, Any] = await graph.ainvoke(
-            _build_initial_state(request),
+            _build_initial_state(request.question, language),
             config=config,
         )
     except Exception as e:
@@ -105,20 +127,18 @@ async def run_agent(request: RunRequest) -> RunResponse:
 
 @router.post("/stream")
 async def stream_agent(request: RunRequest):
-    """
-    Stream agent events back to client using Server-Sent Events.
-    Client receives node updates as they happen.
-    """
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
-    import uuid
+    language: str = _detect_language(request.question)
+    print(f"[routes] /stream — language: {language}", flush=True)
+
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
 
     async def event_generator():
         try:
             async for event in graph.astream(
-                _build_initial_state(request),
+                _build_initial_state(request.question, language),
                 config=config,
                 stream_mode="updates",
             ):
@@ -130,11 +150,11 @@ async def stream_agent(request: RunRequest):
                         "is_solved":   update.get("is_solved"),
                         "final_code":  update.get("final_code"),
                         "test_status": update.get("test_status"),
+                        "language":    language,
                     }
                     yield f"data: {json.dumps(payload)}\n\n"
                     await asyncio.sleep(0)
 
-            # signal completion
             yield f"data: {json.dumps({'done': True})}\n\n"
 
         except Exception as e:

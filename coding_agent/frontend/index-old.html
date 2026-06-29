@@ -34,20 +34,18 @@
                         <textarea
                             id="questionInput"
                             class="code-textarea"
-                            placeholder="Write a Python function that reverses a string...
-Write a Java class that calculates factorial...
-Write a Go function that sorts an array...
-
-(Language is auto-detected from your prompt. Default: Python)"
-                            rows="7"
+                            placeholder="Write a Python function that reverses a string without using slicing..."
+                            rows="6"
                         ></textarea>
 
-                        <!-- Language detection badge -->
-                        <div class="lang-detect-row mt-2">
-                            <span class="lang-detect-label">Detected language:</span>
-                            <span class="lang-badge" id="langBadge">🐍 Python</span>
-                            <span class="lang-detect-hint">(mention a language to change)</span>
-                        </div>
+                        <p class="panel-label mt-3">Language</p>
+                        <select id="languageSelect" class="lang-select">
+                            <option value="python"     selected>Python</option>
+                            <option value="javascript">JavaScript</option>
+                            <option value="typescript">TypeScript</option>
+                            <option value="java">Java</option>
+                            <option value="go">Go</option>
+                        </select>
 
                         <button
                             class="run-btn mt-4"
@@ -105,10 +103,9 @@ Write a Go function that sorts an array...
 
                     <!-- Status -->
                     <div class="panel d-none" id="statusPanel">
-                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="d-flex align-items-center gap-3">
                             <span id="statusBadge" class="status-badge"></span>
                             <span id="statusMeta" class="status-meta"></span>
-                            <span id="langUsedBadge" class="lang-used-badge"></span>
                         </div>
                     </div>
 
@@ -144,8 +141,6 @@ Write a Go function that sorts an array...
             <span>Built with LangGraph · LangChain · FastAPI</span>
             <span class="footer-div">·</span>
             <a href="https://github.com/subhrajitpyne/GenAI_Assignments" target="_blank">GitHub</a>
-            <span class="footer-div">·</span>
-            <a href="https://hashnode.com" target="_blank">Code & Automate</a>
         </div>
     </footer>
 
